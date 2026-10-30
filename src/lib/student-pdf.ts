@@ -220,7 +220,8 @@ function statTiles(f: Flow, rows: AttendanceRow[]) {
 
 const TX = M + 8, TW = CW - 14;
 
-function tutanakCard(f: Flow, t: Tutanak, a: Att) {
+/** `reserve`: mm to keep free below the card on the same page (e.g. signature lines). */
+function tutanakCard(f: Flow, t: Tutanak, a: Att, reserve = 0) {
   const d = f.doc;
   const main: RGB = t.positive ? C.green : C.red;
   const soft: RGB = t.positive ? C.greenSoft : C.redSoft;
@@ -232,17 +233,22 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att) {
   const bodyLines = t.body ? (d.splitTextToSize(t.body, TW - 6) as string[]) : [];
   const lh = 4.9;
   const imgs = [a.photo && { img: a.photo, l: "Fotoğraf Kanıtı" }, a.doc && { img: a.doc, l: "İmzalı Belge" }].filter(Boolean) as { img: Img; l: string }[];
+  const headH = titleLines.length * 5.2 + 9;
+  const bodyH = bodyLines.length ? bodyLines.length * lh + 8 : 0;
+  const metaH = 7 + (a.docPdf ? 5 : 0);
   const slotW = imgs.length === 2 ? (TW - 4) / 2 : TW - 2;
-  const maxImgH = imgs.length === 2 ? 100 : 125;
+  let maxImgH = imgs.length === 2 ? 100 : 125;
+  if (reserve) {
+    // Shrink photos (never below 70 mm) so what follows still fits on this page.
+    const room = BOTTOM - f.y - reserve - (6 + headH + bodyH + metaH + 3) - 8;
+    maxImgH = Math.max(70, Math.min(maxImgH, room));
+  }
   const sizes = imgs.map(({ img }) => {
     let w = slotW, h = (w * img.h) / img.w;
     if (h > maxImgH) { h = maxImgH; w = (h * img.w) / img.h; }
     return { w, h };
   });
   const imgH = sizes.length ? Math.max(...sizes.map((s) => s.h)) + 8 : 0;
-  const headH = titleLines.length * 5.2 + 9;
-  const bodyH = bodyLines.length ? bodyLines.length * lh + 8 : 0;
-  const metaH = 7 + (a.docPdf ? 5 : 0);
   const total = 6 + headH + bodyH + metaH + imgH + 3;
 
   const drawHead = (y: number) => {
