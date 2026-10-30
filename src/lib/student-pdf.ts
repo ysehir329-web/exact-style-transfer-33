@@ -395,7 +395,7 @@ export async function makeTutanakPdf(s: Student, t: Tutanak) {
   f.y = 56;
   infoPanel(f, s);
   section(f, "Tutanak", t.positive ? C.green : C.red);
-  tutanakCard(f, t, att);
+  tutanakCard(f, t, att, 44); // card gap + spacing + signature block
   f.y += 6;
   signatures(f);
   footers(d, s.name);
