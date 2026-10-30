@@ -9,6 +9,8 @@ import { writeFullTutanak } from "@/lib/tutanak-ai.functions";
 import { trDate, type AiTutanak } from "@/lib/ai-tutanak";
 import { useStore, type Student, type Tutanak } from "@/lib/store";
 import { localIso } from "@/lib/utils";
+import { useEffect, useRef } from "react";
+import { newFileId, prepareFile, putFile, type StoredFile } from "@/lib/attachments";
 
 export const Route = createFileRoute("/ai-tutanak")({
   head: () => ({
@@ -40,6 +42,14 @@ function AiTutanakPage() {
   const [msg, setMsg] = useState("");
   const [result, setResult] = useState<AiTutanak | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
+  const [pic, setPic] = useState<StoredFile | null>(null);
+  const [picUrl, setPicUrl] = useState("");
+  const picRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!pic) { setPicUrl(""); return; }
+    const u = URL.createObjectURL(pic.blob); setPicUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [pic]);
 
   const listed = students.find((s) => s.id === studentId);
   const manual = studentId === OTHER || students.length === 0;
@@ -65,9 +75,11 @@ function AiTutanakPage() {
     : null;
   const pdfStudent: Student = listed ?? { id: "", name, age: "", group: "", city: "", startDate: "", guardian: "", phone: "", status: "İyi" };
 
-  const save = () => {
+  const save = async () => {
     if (!listed || !tutanak) return;
-    addTutanak({ title: tutanak.title, tag: tutanak.tag, date, body: tutanak.body, positive, signed: false, studentId: listed.id });
+    let studentPhotoId: string | undefined;
+    if (pic) { studentPhotoId = newFileId(); await putFile(studentPhotoId, pic).catch(() => { studentPhotoId = undefined; }); }
+    addTutanak({ title: tutanak.title, tag: tutanak.tag, date, body: tutanak.body, positive, signed: false, studentId: listed.id, studentPhotoId });
     setSaved(listed.id);
   };
 
@@ -135,15 +147,20 @@ function AiTutanakPage() {
       </div>
 
       {result && tutanak && (
-        <div className="mt-5 rounded-3xl border border-border bg-card p-4 shadow-sm">
-          <p className="text-center text-xs font-semibold tracking-[0.2em] text-muted-foreground">TALEBE TUTANAĞI</p>
+        <div className="relative mt-5 rounded-3xl border border-border bg-card p-4 shadow-sm">
+          <button type="button" onClick={() => picRef.current?.click()} aria-label="Talebe resmi ekle" className="absolute right-4 top-4 flex h-24 w-20 items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-surface text-center text-[11px] leading-tight text-muted-foreground">
+            {picUrl ? <img src={picUrl} alt="Talebe resmi" className="h-full w-full object-cover" /> : <span className="px-1">Talebe resmi ekle</span>}
+          </button>
+          <input ref={picRef} type="file" accept="image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) { setPic(await prepareFile(f)); setSaved(null); } }} />
+          {pic && <button type="button" onClick={() => setPic(null)} className="absolute right-4 top-[7.4rem] w-20 text-center text-[11px] text-destructive">Resmi kaldır</button>}
+          <p className="pr-24 text-center text-xs font-semibold tracking-[0.2em] text-muted-foreground">TALEBE TUTANAĞI</p>
           <textarea
             rows={2}
-            className="mt-2 w-full resize-none bg-transparent text-center font-serif text-xl font-bold leading-snug outline-none"
+            className="mt-2 w-full resize-none bg-transparent pr-24 text-center font-serif text-xl font-bold leading-snug outline-none"
             value={result.title}
             onChange={(e) => setResult({ ...result, title: e.target.value })}
           />
-          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs">
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2 pr-24 text-xs">
             <span className="rounded-full bg-surface px-3 py-1 font-medium">{name}</span>
             <span className="rounded-full bg-surface px-3 py-1">{trDate(date)}</span>
             <span className={`rounded-full px-3 py-1 ${positive ? "bg-good text-primary-foreground" : "bg-destructive text-destructive-foreground"}`}>{result.tag}</span>
@@ -158,8 +175,8 @@ function AiTutanakPage() {
 
           <div className="mt-4 grid grid-cols-2 gap-2">
             <PdfButton
-              make={() => import("@/lib/student-pdf").then((m) => m.makeTutanakPdf(pdfStudent, tutanak))}
-              depsKey={JSON.stringify([tutanak, pdfStudent])}
+              make={() => import("@/lib/student-pdf").then((m) => m.makeTutanakPdf(pdfStudent, tutanak, pic?.blob))}
+              depsKey={JSON.stringify([tutanak, pdfStudent, picUrl])}
               label="PDF İndir"
               className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-soft px-3 py-3 text-sm font-medium text-primary"
             />
