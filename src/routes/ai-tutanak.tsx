@@ -137,8 +137,9 @@ function AiTutanakPage() {
       {result && tutanak && (
         <div className="mt-5 rounded-3xl border border-border bg-card p-4 shadow-sm">
           <p className="text-center text-xs font-semibold tracking-[0.2em] text-muted-foreground">TALEBE TUTANAĞI</p>
-          <input
-            className="mt-2 w-full bg-transparent text-center font-serif text-xl font-bold outline-none"
+          <textarea
+            rows={2}
+            className="mt-2 w-full resize-none bg-transparent text-center font-serif text-xl font-bold leading-snug outline-none"
             value={result.title}
             onChange={(e) => setResult({ ...result, title: e.target.value })}
           />
