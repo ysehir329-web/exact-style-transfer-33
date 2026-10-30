@@ -59,7 +59,7 @@ export function parseAiTutanak(raw: string, fallback: { title: string; tag: stri
   const end = text.lastIndexOf("}");
   if (start >= 0 && end > start) {
     try {
-      const j = JSON.parse(text.slice(start, end + 1)) as Record<string, unknown>;
+      const j = JSON.parse(text.slice(start, end + 1)) as { baslik?: unknown; kategori?: unknown; metin?: unknown };
       const body = typeof j.metin === "string" ? j.metin.trim() : "";
       if (body) {
         return {
