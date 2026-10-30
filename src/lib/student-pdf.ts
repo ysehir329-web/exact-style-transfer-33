@@ -28,7 +28,7 @@ type Att = { photo: Img | null; doc: Img | null; docPdf: Uint8Array | null };
 async function toImg(blob: Blob): Promise<Img | null> {
   try {
     const bmp = await createImageBitmap(blob);
-    const s = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+    const s = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
     const c = document.createElement("canvas");
     c.width = Math.round(bmp.width * s);
     c.height = Math.round(bmp.height * s);
@@ -220,7 +220,8 @@ function statTiles(f: Flow, rows: AttendanceRow[]) {
 
 const TX = M + 8, TW = CW - 14;
 
-function tutanakCard(f: Flow, t: Tutanak, a: Att) {
+/** `reserve`: mm to keep free below the card on the same page (e.g. signature lines). */
+function tutanakCard(f: Flow, t: Tutanak, a: Att, reserve = 0) {
   const d = f.doc;
   const main: RGB = t.positive ? C.green : C.red;
   const soft: RGB = t.positive ? C.greenSoft : C.redSoft;
@@ -232,16 +233,22 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att) {
   const bodyLines = t.body ? (d.splitTextToSize(t.body, TW - 6) as string[]) : [];
   const lh = 4.9;
   const imgs = [a.photo && { img: a.photo, l: "Fotoğraf Kanıtı" }, a.doc && { img: a.doc, l: "İmzalı Belge" }].filter(Boolean) as { img: Img; l: string }[];
-  const slotW = imgs.length === 2 ? (TW - 4) / 2 : Math.min(TW, 110);
-  const sizes = imgs.map(({ img }) => {
-    let w = slotW, h = (w * img.h) / img.w;
-    if (h > 62) { h = 62; w = (h * img.w) / img.h; }
-    return { w, h };
-  });
-  const imgH = sizes.length ? Math.max(...sizes.map((s) => s.h)) + 8 : 0;
   const headH = titleLines.length * 5.2 + 9;
   const bodyH = bodyLines.length ? bodyLines.length * lh + 8 : 0;
   const metaH = 7 + (a.docPdf ? 5 : 0);
+  const slotW = imgs.length === 2 ? (TW - 4) / 2 : TW - 2;
+  let maxImgH = imgs.length === 2 ? 100 : 125;
+  if (reserve) {
+    // Shrink photos (never below 70 mm) so what follows still fits on this page.
+    const room = BOTTOM - f.y - reserve - (6 + headH + bodyH + metaH + 3) - 8;
+    maxImgH = Math.max(70, Math.min(maxImgH, room));
+  }
+  const sizes = imgs.map(({ img }) => {
+    let w = slotW, h = (w * img.h) / img.w;
+    if (h > maxImgH) { h = maxImgH; w = (h * img.w) / img.h; }
+    return { w, h };
+  });
+  const imgH = sizes.length ? Math.max(...sizes.map((s) => s.h)) + 8 : 0;
   const total = 6 + headH + bodyH + metaH + imgH + 3;
 
   const drawHead = (y: number) => {
@@ -268,9 +275,10 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att) {
     let x = TX;
     imgs.forEach(({ img, l }, i) => {
       const s = sizes[i]!;
-      d.addImage(img.data, "JPEG", x, y, s.w, s.h);
+      const ix = x + (slotW - s.w) / 2;
+      d.addImage(img.data, "JPEG", ix, y, s.w, s.h);
       font(d, 7.5, false, C.gray);
-      d.text(l, x, y + s.h + 4);
+      d.text(l, ix, y + s.h + 4);
       x += slotW + 4;
     });
   };
@@ -387,7 +395,7 @@ export async function makeTutanakPdf(s: Student, t: Tutanak) {
   f.y = 56;
   infoPanel(f, s);
   section(f, "Tutanak", t.positive ? C.green : C.red);
-  tutanakCard(f, t, att);
+  tutanakCard(f, t, att, 44); // card gap + spacing + signature block
   f.y += 6;
   signatures(f);
   footers(d, s.name);
