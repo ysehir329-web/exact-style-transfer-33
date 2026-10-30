@@ -83,7 +83,7 @@ class Flow {
   }
 }
 
-function header(d: Doc, kicker: string, s: Student) {
+function header(d: Doc, kicker: string, s: Student, photo = false) {
   fill(d, C.green);
   d.rect(0, 0, PW, 44, "F");
   fill(d, C.greenMid);
@@ -94,7 +94,7 @@ function header(d: Doc, kicker: string, s: Student) {
   font(d, 8.5, true, [205, 232, 218]);
   d.text(`KUR'AN KURSU · ${kicker.toLocaleUpperCase("tr")}`, M, 13);
   font(d, 8, false, [205, 232, 218]);
-  d.text(`Hazırlanma: ${fmt(localIso())}`, PW - M, 13, { align: "right" });
+  d.text(`Hazırlanma: ${fmt(localIso())}`, photo ? PW - M - 36 : PW - M, 13, { align: "right" });
   font(d, 22, true, C.white);
   d.text(s.name, M, 28);
   const sub = [s.age && `${s.age} yaş`, s.group, s.city].filter(Boolean).join("  ·  ");
@@ -388,9 +388,38 @@ export async function makeStudentPdf(s: Student, rows: AttendanceRow[], tut: Tut
   return { blob, name: `aile-raporu-${fileSlug(s.name)}.pdf` };
 }
 
-export async function makeTutanakPdf(s: Student, t: Tutanak) {
-  const [d, att] = await Promise.all([newDoc(), loadAtt(t)]);
-  header(d, "Tutanak", s);
+async function portrait(t: Tutanak, extra?: Blob | null): Promise<Img | null> {
+  const blob = extra ?? (t.studentPhotoId ? (await getFile(t.studentPhotoId).catch(() => undefined))?.blob : undefined);
+  return blob ? toImg(blob) : null;
+}
+
+/** Student photo framed in the top-right corner of the header. */
+function drawPortrait(d: Doc, img: Img) {
+  const bw = 30, bh = 38, x = PW - M - bw, y = 4;
+  fill(d, C.white);
+  d.roundedRect(x - 1.2, y - 1.2, bw + 2.4, bh + 2.4, 2, 2, "F");
+  // cover-crop into the frame
+  let w = bw, h = (bw * img.h) / img.w;
+  if (h < bh) { h = bh; w = (bh * img.w) / img.h; }
+  const c = document.createElement("canvas");
+  const scale = img.w / w;
+  c.width = Math.round(bw * scale); c.height = Math.round(bh * scale);
+  const el = new Image();
+  el.src = img.data;
+  return new Promise<void>((res) => {
+    el.onload = () => {
+      c.getContext("2d")!.drawImage(el, -((w - bw) / 2) * scale, -((h - bh) / 2) * scale, w * scale, h * scale);
+      d.addImage(c.toDataURL("image/jpeg", 0.9), "JPEG", x, y, bw, bh);
+      res();
+    };
+    el.onerror = () => res();
+  });
+}
+
+export async function makeTutanakPdf(s: Student, t: Tutanak, studentPhoto?: Blob | null) {
+  const [d, att, pic] = await Promise.all([newDoc(), loadAtt(t), portrait(t, studentPhoto)]);
+  header(d, "Tutanak", s, !!pic);
+  if (pic) await drawPortrait(d, pic);
   const f = new Flow(d);
   f.y = 56;
   infoPanel(f, s);
