@@ -37,18 +37,17 @@ Yanıtı YALNIZCA şu JSON biçiminde ver, başka hiçbir şey yazma:
 {"baslik": "kısa ve resmi tutanak başlığı (en fazla 8 kelime)", "kategori": "en uygun kategori", "metin": "tutanak metni, paragraflar arasında \\n\\n"}`;
 
 export function buildFullTutanakPrompt(i: FullTutanakInput): string {
-  return [
-    `Talebenin adı: ${i.name.trim()}`,
-    i.group?.trim() ? `Grubu: ${i.group.trim()}` : "",
+  const lines = [`Talebenin adı: ${i.name.trim()}`];
+  if (i.group?.trim()) lines.push(`Grubu: ${i.group.trim()}`);
+  lines.push(
     `Olay tarihi: ${trDate(i.date)}`,
     `Tür: ${i.positive ? "Olumlu" : "Olumsuz"}`,
     `Kategori: ${i.category.trim() || "Sen seç"}`,
     "",
     "Hocanın kısa notu:",
     i.note.trim(),
-  ]
-    .filter((l, idx) => l !== "" || idx === 5)
-    .join("\n");
+  );
+  return lines.join("\n");
 }
 
 export type AiTutanak = { title: string; tag: string; body: string };

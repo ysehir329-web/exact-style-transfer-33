@@ -27,3 +27,33 @@ export const polishTutanak = createServerFn({ method: "POST" })
       return { ok: false as const, error: aiErrorMessage(error) };
     }
   });
+
+/** Expands a short note into a complete, formal tutanak that names the child and the date. */
+export const writeFullTutanak = createServerFn({ method: "POST" })
+  .inputValidator((input: { name: string; date: string; positive: boolean; category: string; note: string; group?: string }) => {
+    const note = String(input?.note ?? "").trim();
+    const name = String(input?.name ?? "").trim();
+    if (!name) throw new Error("Önce talebeyi seçin.");
+    if (!note) throw new Error("Önce kısa notu yazın.");
+    if (note.length > MAX_LEN) throw new Error(`Not en fazla ${MAX_LEN} karakter olabilir.`);
+    return {
+      name: name.slice(0, 120),
+      date: String(input?.date ?? "").slice(0, 10),
+      positive: Boolean(input?.positive),
+      category: String(input?.category ?? "").slice(0, 80),
+      note,
+      group: String(input?.group ?? "").slice(0, 80),
+    };
+  })
+  .handler(async ({ data }) => {
+    const { generateTextViaGateway, aiErrorMessage } = await import("./ai-gateway.server");
+    const { FULL_TUTANAK_INSTRUCTIONS, buildFullTutanakPrompt, parseAiTutanak } = await import("./ai-tutanak");
+    try {
+      const raw = await generateTextViaGateway(FULL_TUTANAK_INSTRUCTIONS, buildFullTutanakPrompt(data));
+      const fallbackTag = data.category || (data.positive ? "Güzel Davranış" : "Diğer");
+      return { ok: true as const, ...parseAiTutanak(raw, { title: fallbackTag, tag: fallbackTag }) };
+    } catch (error) {
+      console.error("writeFullTutanak failed", error);
+      return { ok: false as const, error: aiErrorMessage(error) };
+    }
+  });
