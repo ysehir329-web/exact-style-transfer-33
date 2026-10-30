@@ -35,6 +35,7 @@ export function TutanakForm({ onSubmit, onCancel }: {
   const [f, setF] = useState({ positive: false, date: today(), tag: TUTANAK_TAGS[1]!, title: "", body: "", signed: false });
   const [photo, setPhoto] = useState<StoredFile | null>(null);
   const [doc, setDoc] = useState<StoredFile | null>(null);
+  const [portrait, setPortrait] = useState<StoredFile | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiMsg, setAiMsg] = useState("");
   const [prevBody, setPrevBody] = useState<string | null>(null);
@@ -66,7 +67,9 @@ export function TutanakForm({ onSubmit, onCancel }: {
       let docId: string | undefined;
       if (photo) { photoId = newFileId(); await putFile(photoId, photo); }
       if (doc) { docId = newFileId(); await putFile(docId, doc); }
-      onSubmit({ ...f, title: f.title.trim() || f.tag, photoId, docId });
+      let studentPhotoId: string | undefined;
+      if (portrait) { studentPhotoId = newFileId(); await putFile(studentPhotoId, portrait); }
+      onSubmit({ ...f, title: f.title.trim() || f.tag, photoId, docId, studentPhotoId });
     } catch {
       setAiMsg("Dosya kaydedilemedi. Telefonda yer kalmamış olabilir.");
       setSaving(false);
@@ -124,6 +127,7 @@ export function TutanakForm({ onSubmit, onCancel }: {
         <FilePick icon={Camera} title="Fotoğraf Kanıtı" accept="image/*" file={photo} onPick={pick(setPhoto)} />
         <FilePick icon={FileText} title="İmzalı Belge" accept="image/*,application/pdf" file={doc} onPick={pick(setDoc)} />
       </div>
+      <FilePick icon={Camera} title="Talebe Resmi (PDF'te sağ üstte)" accept="image/*" file={portrait} onPick={pick(setPortrait)} />
 
       <label className="flex items-center gap-2.5 text-sm">
         <input type="checkbox" className="h-5 w-5" checked={f.signed} onChange={(e) => setF({ ...f, signed: e.target.checked })} />
