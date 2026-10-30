@@ -24,6 +24,8 @@ export type Tutanak = {
   /** Attachment ids in IndexedDB (see attachments.ts). */
   photoId?: string | undefined;
   docId?: string | undefined;
+  /** Student portrait shown top-right of the tutanak. */
+  studentPhotoId?: string | undefined;
 };
 
 export type AttendanceRow = {
