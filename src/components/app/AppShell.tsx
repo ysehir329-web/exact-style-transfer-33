@@ -1,11 +1,12 @@
 import { LiquidTabBar } from "./LiquidTabBar";
-import { BookOpen, Users, CalendarCheck, FileText, Menu } from "./icons";
+import { BookOpen, Users, CalendarCheck, FileText, Menu, Sparkles } from "./icons";
 import type { ReactNode } from "react";
 
 const tabs = [
   { to: "/", label: "Talebeler", icon: Users },
   { to: "/yoklama", label: "Yoklama", icon: CalendarCheck },
   { to: "/kagit", label: "Kâğıt", icon: FileText },
+  { to: "/ai-tutanak", label: "AI Tutanak", icon: Sparkles },
   { to: "/menu", label: "Menü", icon: Menu },
 ] as const;
 
