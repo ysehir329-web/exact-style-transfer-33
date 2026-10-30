@@ -263,8 +263,10 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att, reserve = 0) {
     return y + headH;
   };
   const drawMeta = (y: number) => {
-    font(d, 9, true, t.signed ? C.green : C.amber);
-    d.text(t.signed ? "✓ Velisi tarafından imzalandı" : "Veli imzası bekleniyor", TX, y + 4);
+    if (t.signed) {
+      font(d, 9, true, C.green);
+      d.text("✓ Velisi tarafından imzalandı", TX, y + 4);
+    }
     if (a.docPdf) {
       font(d, 8.5, false, C.gray);
       d.text("İmzalı belge (PDF) raporun sonuna eklenmiştir.", TX, y + 9);
