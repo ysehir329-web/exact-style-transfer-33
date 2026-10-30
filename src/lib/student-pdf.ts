@@ -269,9 +269,10 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att) {
     let x = TX;
     imgs.forEach(({ img, l }, i) => {
       const s = sizes[i]!;
-      d.addImage(img.data, "JPEG", x, y, s.w, s.h);
+      const ix = x + (slotW - s.w) / 2;
+      d.addImage(img.data, "JPEG", ix, y, s.w, s.h);
       font(d, 7.5, false, C.gray);
-      d.text(l, x, y + s.h + 4);
+      d.text(l, ix, y + s.h + 4);
       x += slotW + 4;
     });
   };
