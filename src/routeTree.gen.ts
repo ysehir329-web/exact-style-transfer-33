@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiTutanakRouteImport } from './routes/ai-tutanak'
 import { Route as KagitRouteImport } from './routes/kagit'
 import { Route as MenuRouteImport } from './routes/menu'
 import { Route as YoklamaRouteImport } from './routes/yoklama'
@@ -18,6 +19,11 @@ import { Route as TalebeNameRouteImport } from './routes/talebe.$name'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiTutanakRoute = AiTutanakRouteImport.update({
+  id: '/ai-tutanak',
+  path: '/ai-tutanak',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KagitRoute = KagitRouteImport.update({
@@ -43,6 +49,7 @@ const TalebeNameRoute = TalebeNameRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-tutanak': typeof AiTutanakRoute
   '/kagit': typeof KagitRoute
   '/menu': typeof MenuRoute
   '/yoklama': typeof YoklamaRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-tutanak': typeof AiTutanakRoute
   '/kagit': typeof KagitRoute
   '/menu': typeof MenuRoute
   '/yoklama': typeof YoklamaRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-tutanak': typeof AiTutanakRoute
   '/kagit': typeof KagitRoute
   '/menu': typeof MenuRoute
   '/yoklama': typeof YoklamaRoute
@@ -65,14 +74,23 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/kagit' | '/menu' | '/yoklama' | '/talebe/$name'
+  fullPaths:
+    '/' | '/ai-tutanak' | '/kagit' | '/menu' | '/yoklama' | '/talebe/$name'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/kagit' | '/menu' | '/yoklama' | '/talebe/$name'
-  id: '__root__' | '/' | '/kagit' | '/menu' | '/yoklama' | '/talebe/$name'
+  to: '/' | '/ai-tutanak' | '/kagit' | '/menu' | '/yoklama' | '/talebe/$name'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai-tutanak'
+    | '/kagit'
+    | '/menu'
+    | '/yoklama'
+    | '/talebe/$name'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiTutanakRoute: typeof AiTutanakRoute
   KagitRoute: typeof KagitRoute
   MenuRoute: typeof MenuRoute
   YoklamaRoute: typeof YoklamaRoute
@@ -86,6 +104,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-tutanak': {
+      id: '/ai-tutanak'
+      path: '/ai-tutanak'
+      fullPath: '/ai-tutanak'
+      preLoaderRoute: typeof AiTutanakRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/kagit': {
@@ -121,6 +146,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiTutanakRoute: AiTutanakRoute,
   KagitRoute: KagitRoute,
   MenuRoute: MenuRoute,
   YoklamaRoute: YoklamaRoute,

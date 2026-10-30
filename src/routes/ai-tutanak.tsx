@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Check, Loader2, RotateCcw, Save, Sparkles } from "@/components/app/icons";
+import { Check, Loader2, Save, Sparkles } from "@/components/app/icons";
 import { inputCls, primaryBtn } from "@/components/app/Sheet";
 import { PdfButton } from "@/components/app/PdfButton";
 import { TUTANAK_TAGS } from "@/components/app/TutanakForm";
@@ -67,8 +67,7 @@ function AiTutanakPage() {
 
   const save = () => {
     if (!listed || !tutanak) return;
-    const { id: _id, ...rest } = tutanak;
-    addTutanak({ ...rest, studentId: listed.id });
+    addTutanak({ title: tutanak.title, tag: tutanak.tag, date, body: tutanak.body, positive, signed: false, studentId: listed.id });
     setSaved(listed.id);
   };
 
@@ -164,7 +163,7 @@ function AiTutanakPage() {
               className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-soft px-3 py-3 text-sm font-medium text-primary"
             />
             <button type="button" onClick={copy} className="flex items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-3 py-3 text-sm">
-              <RotateCcw className="hidden" /> Kopyala
+              Kopyala
             </button>
           </div>
 
