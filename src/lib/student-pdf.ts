@@ -28,7 +28,7 @@ type Att = { photo: Img | null; doc: Img | null; docPdf: Uint8Array | null };
 async function toImg(blob: Blob): Promise<Img | null> {
   try {
     const bmp = await createImageBitmap(blob);
-    const s = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+    const s = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
     const c = document.createElement("canvas");
     c.width = Math.round(bmp.width * s);
     c.height = Math.round(bmp.height * s);
@@ -232,10 +232,11 @@ function tutanakCard(f: Flow, t: Tutanak, a: Att) {
   const bodyLines = t.body ? (d.splitTextToSize(t.body, TW - 6) as string[]) : [];
   const lh = 4.9;
   const imgs = [a.photo && { img: a.photo, l: "Fotoğraf Kanıtı" }, a.doc && { img: a.doc, l: "İmzalı Belge" }].filter(Boolean) as { img: Img; l: string }[];
-  const slotW = imgs.length === 2 ? (TW - 4) / 2 : Math.min(TW, 110);
+  const slotW = imgs.length === 2 ? (TW - 4) / 2 : TW - 2;
+  const maxImgH = imgs.length === 2 ? 100 : 125;
   const sizes = imgs.map(({ img }) => {
     let w = slotW, h = (w * img.h) / img.w;
-    if (h > 62) { h = 62; w = (h * img.w) / img.h; }
+    if (h > maxImgH) { h = maxImgH; w = (h * img.w) / img.h; }
     return { w, h };
   });
   const imgH = sizes.length ? Math.max(...sizes.map((s) => s.h)) + 8 : 0;
