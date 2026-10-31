@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { buildReport, fileSlug, filterRows, periodRange } from "./report";
+import { buildChart, describe, expect, it } from "vitest";
+import { buildChart, buildReport, fileSlug, filterRows, periodRange } from "./report";
 import type { AttendanceRow, Student } from "./store";
 
 const row = (id: string, date: string, vakitler: string[], ders = false, durum: AttendanceRow["durum"] = "normal"): AttendanceRow => ({ id, studentId: "s1", date, vakitler, ders, durum });
@@ -43,5 +43,28 @@ describe("file names", () => {
   it("turns Turkish names into safe file names", () => {
     expect(fileSlug("Ahmet Yılmaz")).toBe("ahmet-yilmaz");
     expect(fileSlug("İsmail Çağrı Öztürk")).toBe("ismail-cagri-ozturk");
+  });
+});
+
+describe("buildChart (namaz takip çizelgesi)", () => {
+  const st = [{ id: "a", name: "Ali" }, { id: "b", name: "Bekir" }] as never[];
+  const row = (studentId: string, date: string, vakitler: string[], durum = "normal") => ({ id: studentId + date, studentId, date, vakitler, ders: false, durum }) as never;
+  const c = buildChart(st, [
+    row("a", "2026-10-01", ["Sabah", "Öğle"]),
+    row("a", "2026-10-02", []),
+    row("b", "2026-10-01", [], "izinli"),
+    row("a", "2026-10-03", ["Yatsı"]),
+  ]);
+  it("ticks prayed vakit and marks the rest with X", () => {
+    expect(c.rows[0]!.days[0]).toEqual(["✓", "✓", "X", "X", "X"]);
+  });
+  it("counts days attended and missed", () => {
+    expect(c.rows[0]!.katildi).toBe(2);
+    expect(c.rows[0]!.katilmadi).toBe(1);
+  });
+  it("counts a day with no record as missed, izinli as neither", () => {
+    expect(c.rows[1]!.days[0]).toEqual(["İ", "İ", "İ", "İ", "İ"]);
+    expect(c.rows[1]!.katildi).toBe(0);
+    expect(c.rows[1]!.katilmadi).toBe(2);
   });
 });
