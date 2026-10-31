@@ -30,14 +30,15 @@ export function loadFonts() {
 type Pdf = import("jspdf").jsPDF;
 type MonthChart = ReturnType<typeof chartByMonth>[number];
 
-const DAYS_PER_PAGE = 16, ROWS_PER_PAGE = 28;
+const DAYS_PER_PAGE = 10, ROWS_PER_PAGE = 28;
 
 /** Landscape namaz takip çizelgesi pages for one month (✓ / X / İ grid + day counts). */
 function chartPdfPages(doc: Pdf, m: MonthChart, first: boolean) {
   const W = 297, L = 10, R = 10, V = VAKITLER.length;
   const noW = 7, nameW = 44, cntW = 11;
   const dayChunks: number[][] = [];
-  for (let i = 0; i < Math.max(1, m.days.length); i += DAYS_PER_PAGE) dayChunks.push(m.days.slice(i, i + DAYS_PER_PAGE).map((_, k) => i + k));
+  const per = Math.ceil(m.days.length / Math.max(1, Math.ceil(m.days.length / DAYS_PER_PAGE))) || 1;
+  for (let i = 0; i < Math.max(1, m.days.length); i += per) dayChunks.push(m.days.slice(i, i + per).map((_, k) => i + k));
   const rowChunks: number[][] = [];
   for (let i = 0; i < Math.max(1, m.rows.length); i += ROWS_PER_PAGE) rowChunks.push(m.rows.slice(i, i + ROWS_PER_PAGE).map((_, k) => i + k));
   let firstPage = first;
@@ -55,9 +56,9 @@ function chartPdfPages(doc: Pdf, m: MonthChart, first: boolean) {
       doc.setFont("DejaVu", "bold"); doc.setFontSize(12);
       doc.text(`${m.label.toLocaleUpperCase("tr")} · NAMAZ TAKİP ÇİZELGESİ`, x0 + tableW / 2, yT + 5.6, { align: "center" });
       // header cells
-      doc.setFillColor(229, 241, 235);
       days.forEach((di, k) => {
         const x = xv + k * V * vw;
+        doc.setFillColor(229, 241, 235);
         doc.rect(x, yD, V * vw, yV - yD, "FD");
         doc.setFontSize(Math.min(7.5, V * vw * 0.42)); doc.setFont("DejaVu", "bold");
         const d = m.days[di]!;
