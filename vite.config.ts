@@ -26,7 +26,7 @@ export default defineConfig({
     // use, re-optimizes, and already-open tabs fail lazy route imports
     // ("Importing a module script failed").
     optimizeDeps: {
-      include: [...iconDeps, "jspdf", "jspdf-autotable", "pdf-lib", "xlsx", "clsx", "tailwind-merge"],
+      include: [...iconDeps, "jspdf", "jspdf-autotable", "pdf-lib", "xlsx", "xlsx-js-style", "clsx", "tailwind-merge"],
     },
   },
 });
