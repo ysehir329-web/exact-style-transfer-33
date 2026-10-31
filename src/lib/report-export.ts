@@ -1,8 +1,8 @@
 import { VAKITLER } from "./stats";
-import type { buildReport } from "./report";
+import type { buildChart, buildReport } from "./report";
 
 type Report = ReturnType<typeof buildReport>;
-export type ExportInput = { report: Report; title: string; rangeText: string; fileBase: string };
+export type ExportInput = { report: Report; chart?: ReturnType<typeof buildChart>; title: string; rangeText: string; fileBase: string };
 
 const SUMMARY_HEAD = ["Talebe", "Gün", "Kılınan Vakit", "Namaz %", "Ders", "Ders %", "Geç", "İzinli"];
 const DETAIL_HEAD = ["Tarih", "Talebe", ...VAKITLER, "Ders", "Durum"];
@@ -84,9 +84,68 @@ export async function makePdf({ report, title, rangeText }: ExportInput): Promis
   return doc.output("blob");
 }
 
-export async function makeXlsx({ report, title, rangeText }: ExportInput): Promise<Blob> {
-  const XLSX = await import("xlsx");
+type XL = typeof import("xlsx-js-style");
+
+/** Namaz takip çizelgesi sheet, laid out like the kurs's paper chart. */
+function chartSheet(XLSX: XL, chart: NonNullable<ExportInput["chart"]>, title: string) {
+  const V = VAKITLER.length;
+  const first = 2, last = first + chart.days.length * V; // 0-based col after vakit block
+  const ws: Record<string, unknown> = {};
+  const merges: { s: { r: number; c: number }; e: { r: number; c: number } }[] = [];
+  const thin = { style: "thin", color: { rgb: "000000" } };
+  const border = { top: thin, bottom: thin, left: thin, right: thin };
+  const put = (r: number, c: number, v: string | number, s: Record<string, unknown> = {}) => {
+    ws[XLSX.utils.encode_cell({ r, c })] = {
+      v, t: typeof v === "number" ? "n" : "s",
+      s: { border, alignment: { horizontal: "center", vertical: "center", wrapText: true }, font: { name: "Arial", sz: 9 }, ...s },
+    };
+  };
+  const bold = (sz = 9) => ({ font: { name: "Arial", sz, bold: true } });
+  const vert = { alignment: { horizontal: "center", vertical: "center", textRotation: 90 } };
+  const fillG = { fill: { fgColor: { rgb: "E5F1EB" } } };
+
+  for (let c = 0; c <= last + 1; c++) put(0, c, c === 0 ? title.toLocaleUpperCase("tr") : "", bold(12));
+  merges.push({ s: { r: 0, c: 0 }, e: { r: 0, c: last + 1 } });
+  put(1, 0, ""); put(1, 1, "");
+  put(2, 0, ""); put(2, 1, "NAMAZ", bold());
+  put(3, 0, "NO", bold()); put(3, 1, "ADI SOYADI", bold());
+  chart.days.forEach((d, i) => {
+    const c0 = first + i * V;
+    for (let k = 0; k < V; k++) {
+      put(1, c0 + k, k ? "" : dayLabel(d), { ...bold(), ...fillG });
+      put(2, c0 + k, VAKITLER[k]!.toLocaleUpperCase("tr"), { ...bold(8), ...vert });
+      put(3, c0 + k, "");
+    }
+    merges.push({ s: { r: 1, c: c0 }, e: { r: 1, c: c0 + V - 1 } });
+  });
+  ["KATILDIĞI GÜN", "KATILMADIĞI GÜN"].forEach((h, j) => {
+    for (let r = 1; r <= 3; r++) put(r, last + j, r === 1 ? h : "", { ...bold(8), ...vert, ...(j ? { fill: { fgColor: { rgb: "FAE6E6" } } } : fillG) });
+    merges.push({ s: { r: 1, c: last + j }, e: { r: 3, c: last + j } });
+  });
+
+  chart.rows.forEach((row, i) => {
+    const r = 4 + i;
+    put(r, 0, i + 1);
+    put(r, 1, row.name, { ...bold(8), alignment: { horizontal: "left", vertical: "center" } });
+    row.days.forEach((marks, di) => marks.forEach((m, k) => {
+      const color = m === "✓" ? "1E7B4F" : m === "X" ? "C43434" : "7452AA";
+      put(r, first + di * V + k, m, { font: { name: "Arial", sz: 10, bold: true, color: { rgb: color } } });
+    }));
+    put(r, last, row.katildi, { ...bold(10), font: { name: "Arial", sz: 10, bold: true, color: { rgb: "1E7B4F" } } });
+    put(r, last + 1, row.katilmadi, { font: { name: "Arial", sz: 10, bold: true, color: { rgb: "C43434" } } });
+  });
+
+  ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: 3 + Math.max(1, chart.rows.length), c: last + 1 } });
+  ws["!merges"] = merges;
+  ws["!cols"] = [{ wch: 4 }, { wch: 24 }, ...Array.from({ length: last - first }, () => ({ wch: 3 })), { wch: 6 }, { wch: 6 }];
+  ws["!rows"] = [{ hpt: 24 }, { hpt: 18 }, { hpt: 52 }, { hpt: 16 }];
+  return ws;
+}
+
+export async function makeXlsx({ report, chart, title, rangeText }: ExportInput): Promise<Blob> {
+  const XLSX = (await import("xlsx-js-style")) as unknown as XL & typeof import("xlsx");
   const wb = XLSX.utils.book_new();
+  if (chart) XLSX.utils.book_append_sheet(wb, chartSheet(XLSX, chart, `${title} · Namaz Takip Çizelgesi`) as never, "Namaz Takip");
 
   const summary = XLSX.utils.aoa_to_sheet([
     [title],

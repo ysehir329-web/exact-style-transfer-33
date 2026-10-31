@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, FileSpreadsheet, FileText, Loader2 } from "./icons";
 import { Sheet, Field, inputCls, primaryBtn } from "./Sheet";
 import { useStore } from "@/lib/store";
-import { PERIODS, buildReport, filterRows, periodRange, rangeLabel, type Period } from "@/lib/report";
+import { PERIODS, buildChart, buildReport, filterRows, periodRange, rangeLabel, type Period } from "@/lib/report";
 import { deliverFile, makePdf, makeXlsx } from "@/lib/report-export";
 
 type Format = "pdf" | "xlsx";
@@ -46,7 +46,8 @@ export function ReportSheet({ open, onClose, initialDate, studentId: initialStud
         const report = buildReport(students, rows);
         const title = `${periodLabel} Yoklama Raporu${studentName ? ` — ${studentName}` : ""}`;
         const fileBase = `yoklama-${period}-${range.start}${range.end !== range.start ? `_${range.end}` : ""}${studentName ? `-${studentName.toLocaleLowerCase("tr").replace(/\s+/g, "-")}` : ""}`;
-        const input = { report, title, rangeText: rangeLabel(range), fileBase };
+        const chart = buildChart(studentId ? students.filter((s) => s.id === studentId) : students, rows);
+        const input = { report, chart, title, rangeText: rangeLabel(range), fileBase };
         const blob = format === "pdf" ? await makePdf(input) : await makeXlsx(input);
         if (!cancelled) setFile({ blob, name: `${fileBase}.${format}` });
       } catch (e) {
