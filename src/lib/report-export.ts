@@ -1,5 +1,5 @@
 import { VAKITLER } from "./stats";
-import type { buildChart, buildReport } from "./report";
+import { chartByMonth, type buildChart, type buildReport } from "./report";
 
 type Report = ReturnType<typeof buildReport>;
 export type ExportInput = { report: Report; chart?: ReturnType<typeof buildChart>; title: string; rangeText: string; fileBase: string };
@@ -27,17 +27,102 @@ export function loadFonts() {
   return fontCache;
 }
 
-export async function makePdf({ report, title, rangeText }: ExportInput): Promise<Blob> {
+type Pdf = import("jspdf").jsPDF;
+type MonthChart = ReturnType<typeof chartByMonth>[number];
+
+const DAYS_PER_PAGE = 16, ROWS_PER_PAGE = 28;
+
+/** Landscape namaz takip çizelgesi pages for one month (✓ / X / İ grid + day counts). */
+function chartPdfPages(doc: Pdf, m: MonthChart, first: boolean) {
+  const W = 297, L = 10, R = 10, V = VAKITLER.length;
+  const noW = 7, nameW = 44, cntW = 11;
+  const dayChunks: number[][] = [];
+  for (let i = 0; i < Math.max(1, m.days.length); i += DAYS_PER_PAGE) dayChunks.push(m.days.slice(i, i + DAYS_PER_PAGE).map((_, k) => i + k));
+  const rowChunks: number[][] = [];
+  for (let i = 0; i < Math.max(1, m.rows.length); i += ROWS_PER_PAGE) rowChunks.push(m.rows.slice(i, i + ROWS_PER_PAGE).map((_, k) => i + k));
+  let firstPage = first;
+  for (const days of dayChunks)
+    for (const rows of rowChunks) {
+      if (!firstPage) doc.addPage("a4", "landscape");
+      firstPage = false;
+      const vw = Math.min(4.2, (W - L - R - noW - nameW - 2 * cntW) / Math.max(1, days.length * V));
+      const tableW = noW + nameW + days.length * V * vw + 2 * cntW;
+      const x0 = L + (W - L - R - tableW) / 2;
+      const xv = x0 + noW + nameW, xc = xv + days.length * V * vw;
+      const yT = 10, yD = 18, yV = 24, yH = 42, rh = 5.6;
+      doc.setDrawColor(0); doc.setLineWidth(0.2); doc.setTextColor(0);
+      doc.rect(x0, yT, tableW, yD - yT);
+      doc.setFont("DejaVu", "bold"); doc.setFontSize(12);
+      doc.text(`${m.label.toLocaleUpperCase("tr")} · NAMAZ TAKİP ÇİZELGESİ`, x0 + tableW / 2, yT + 5.6, { align: "center" });
+      // header cells
+      doc.setFillColor(229, 241, 235);
+      days.forEach((di, k) => {
+        const x = xv + k * V * vw;
+        doc.rect(x, yD, V * vw, yV - yD, "FD");
+        doc.setFontSize(Math.min(7.5, V * vw * 0.42)); doc.setFont("DejaVu", "bold");
+        const d = m.days[di]!;
+        doc.text(`${d.slice(8, 10)}.${d.slice(5, 7)}`, x + (V * vw) / 2, yD + 4.1, { align: "center" });
+        VAKITLER.forEach((v, j) => {
+          const cx = x + j * vw;
+          doc.rect(cx, yV, vw, yH - yV);
+          doc.setFontSize(Math.min(6, vw * 1.7));
+          doc.text(v.toLocaleUpperCase("tr"), cx + vw / 2 + 0.9, yH - 1.5, { angle: 90 });
+        });
+      });
+      doc.rect(x0, yD, noW, yH - yD); doc.rect(x0 + noW, yD, nameW, yH - yD);
+      doc.setFontSize(7.5);
+      doc.text("NO", x0 + noW / 2, yH - 2, { align: "center" });
+      doc.text("ADI SOYADI", x0 + noW + nameW / 2, yH - 2, { align: "center" });
+      doc.text("NAMAZ", x0 + noW + nameW / 2, yV + 6, { align: "center" });
+      (["KATILDIĞI GÜN", "KATILMADIĞI GÜN"] as const).forEach((h, j) => {
+        const x = xc + j * cntW;
+        if (j) doc.setFillColor(250, 230, 230); else doc.setFillColor(229, 241, 235);
+        doc.rect(x, yD, cntW, yH - yD, "FD");
+        doc.setFontSize(6.3);
+        const [a, b] = h.split(" ");
+        doc.text(a!, x + cntW / 2 - 0.6, yH - 2, { angle: 90 });
+        doc.text(b!, x + cntW / 2 + 2.9, yH - 2, { angle: 90 });
+      });
+      // body
+      rows.forEach((ri, k) => {
+        const r = m.rows[ri]!;
+        const y = yH + k * rh;
+        doc.setTextColor(0); doc.setFont("DejaVu", "normal"); doc.setFontSize(7.5);
+        doc.rect(x0, y, noW, rh); doc.text(String(ri + 1), x0 + noW / 2, y + 3.9, { align: "center" });
+        doc.rect(x0 + noW, y, nameW, rh);
+        doc.setFont("DejaVu", "bold"); doc.setFontSize(7);
+        const nm = doc.splitTextToSize(r.name, nameW - 2) as string[];
+        doc.text(nm[0]!, x0 + noW + 1, y + 3.8);
+        days.forEach((di, kk) => r.days[di]!.forEach((mark, j) => {
+          const cx = xv + (kk * V + j) * vw;
+          doc.rect(cx, y, vw, rh);
+          const col: [number, number, number] = mark === "✓" ? [30, 123, 79] : mark === "X" ? [196, 52, 52] : [116, 82, 170];
+          doc.setTextColor(col[0], col[1], col[2]);
+          doc.setFontSize(Math.min(8, vw * 2.3));
+          doc.text(mark, cx + vw / 2, y + 3.9, { align: "center" });
+        }));
+        doc.setFontSize(9);
+        doc.setTextColor(30, 123, 79); doc.rect(xc, y, cntW, rh); doc.text(String(r.katildi), xc + cntW / 2, y + 4, { align: "center" });
+        doc.setTextColor(196, 52, 52); doc.rect(xc + cntW, y, cntW, rh); doc.text(String(r.katilmadi), xc + cntW * 1.5, y + 4, { align: "center" });
+      });
+      doc.setTextColor(0);
+    }
+}
+
+export async function makePdf({ report, chart, title, rangeText }: ExportInput): Promise<Blob> {
   const [{ jsPDF }, { default: autoTable }, [regular, bold]] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
     loadFonts(),
   ]);
-  const doc = new jsPDF({ unit: "mm", format: "a4" });
+  const months = chart ? chartByMonth(chart) : [];
+  const doc = new jsPDF({ unit: "mm", format: "a4", orientation: months.length ? "landscape" : "portrait" });
   doc.addFileToVFS("DejaVuSans.ttf", regular);
   doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
   doc.addFileToVFS("DejaVuSans-Bold.ttf", bold);
   doc.addFont("DejaVuSans-Bold.ttf", "DejaVu", "bold");
+  months.forEach((m, i) => chartPdfPages(doc, m, i === 0));
+  if (months.length) doc.addPage("a4", "portrait");
 
   const green: [number, number, number] = [34, 99, 74];
   doc.setFont("DejaVu", "bold");
@@ -79,7 +164,8 @@ export async function makePdf({ report, title, rangeText }: ExportInput): Promis
     doc.setFont("DejaVu", "normal");
     doc.setFontSize(8);
     doc.setTextColor(130);
-    doc.text(`Kur'an Kursu · Sayfa ${i}/${pages}`, 105, 290, { align: "center" });
+    const { width, height } = doc.internal.pageSize;
+    doc.text(`Kur'an Kursu · Sayfa ${i}/${pages}`, width / 2, height - 6, { align: "center" });
   }
   return doc.output("blob");
 }
@@ -145,7 +231,9 @@ function chartSheet(XLSX: XL, chart: NonNullable<ExportInput["chart"]>, title: s
 export async function makeXlsx({ report, chart, title, rangeText }: ExportInput): Promise<Blob> {
   const XLSX = (await import("xlsx-js-style")) as unknown as XL & typeof import("xlsx");
   const wb = XLSX.utils.book_new();
-  if (chart) XLSX.utils.book_append_sheet(wb, chartSheet(XLSX, chart, `${title} · Namaz Takip Çizelgesi`) as never, "Namaz Takip");
+  if (chart)
+    for (const m of chartByMonth(chart))
+      XLSX.utils.book_append_sheet(wb, chartSheet(XLSX, m, `${m.label} · Namaz Takip Çizelgesi`) as never, m.label);
 
   const summary = XLSX.utils.aoa_to_sheet([
     [title],
