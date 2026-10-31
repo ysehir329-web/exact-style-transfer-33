@@ -35,8 +35,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               <BookOpen className="h-4 w-4" />
             </div>
             <div>
-              <h1 className="font-serif text-lg font-bold leading-tight text-primary-foreground">Kur'an Kursu</h1>
-              <p className="text-[11px] text-primary-foreground/85">İlim, hayatın en güzel rehberidir</p>
+              <h1 className="font-serif text-lg font-bold leading-tight text-primary-foreground">TALEBE TAKİP PANELİ</h1>
             </div>
           </div>
         </header>
