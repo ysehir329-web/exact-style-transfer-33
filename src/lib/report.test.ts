@@ -1,4 +1,4 @@
-import { buildChart, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildChart, buildReport, fileSlug, filterRows, periodRange } from "./report";
 import type { AttendanceRow, Student } from "./store";
 
