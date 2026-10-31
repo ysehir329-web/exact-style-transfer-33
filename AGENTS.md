@@ -10,7 +10,7 @@
 <!-- LOVABLE:END -->
 
 ## Project rules
-- Attendance report export (PDF via jspdf, Excel via xlsx) lives in `src/lib/report-export.ts` and loads those libraries with dynamic `import()` so they never slow app startup; period/summary logic stays pure in `src/lib/report.ts` with tests.
+- Attendance report export (PDF via jspdf, Excel via xlsx-js-style because plain SheetJS cannot write borders/rotated text for the namaz takip çizelgesi) lives in `src/lib/report-export.ts` and loads those libraries with dynamic `import()` so they never slow app startup; period/summary logic stays pure in `src/lib/report.ts` with tests.
 - PDFs embed the subset DejaVu fonts in `public/fonts/` because jsPDF's built-in fonts cannot render Turkish letters (ğ, ş, ı, İ).
 - App data lives in browser localStorage via `src/lib/store.tsx`; there is no backend.
 - Lazily imported npm deps must be listed in `optimizeDeps.include` in `vite.config.ts`, because runtime re-optimization breaks lazy route imports in open tabs; `src/lib/chunk-reload.ts` reloads once on any chunk-load failure as a safety net.

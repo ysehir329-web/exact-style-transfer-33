@@ -121,3 +121,31 @@ export function fileSlug(s: string) {
       .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "talebe"
   );
 }
+
+export type ChartMark = "✓" | "X" | "İ";
+export type ChartRow = { name: string; days: ChartMark[][]; katildi: number; katilmadi: number };
+
+/**
+ * Namaz takip çizelgesi: one row per student, one 5-vakit block per recorded day.
+ * ✓ = kıldı, X = kılmadı (or no record that day), İ = izinli.
+ * Katıldığı gün = at least one vakit; katılmadığı gün = no vakit and not izinli.
+ */
+export function buildChart(students: Student[], rows: AttendanceRow[]) {
+  const ids = new Set(students.map((s) => s.id));
+  const days = [...new Set(rows.filter((r) => ids.has(r.studentId)).map((r) => r.date))].sort();
+  const byKey = new Map(rows.map((r) => [`${r.studentId}|${r.date}`, r]));
+  const list: ChartRow[] = [...students]
+    .sort((a, b) => a.name.localeCompare(b.name, "tr"))
+    .map((s) => {
+      let katildi = 0, katilmadi = 0;
+      const marks = days.map((d) => {
+        const r = byKey.get(`${s.id}|${d}`);
+        if (r?.durum === "izinli") return VAKITLER.map(() => "İ" as const);
+        const prayed = r ? r.vakitler : [];
+        if (prayed.length) katildi++; else katilmadi++;
+        return VAKITLER.map((v) => (prayed.includes(v) ? "✓" : "X") as ChartMark);
+      });
+      return { name: s.name, days: marks, katildi, katilmadi };
+    });
+  return { days, rows: list };
+}
