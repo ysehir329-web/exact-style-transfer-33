@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildChart, buildReport, fileSlug, filterRows, periodRange } from "./report";
+import { buildChart, chartByMonth, buildReport, fileSlug, filterRows, periodRange } from "./report";
 import type { AttendanceRow, Student } from "./store";
 
 const row = (id: string, date: string, vakitler: string[], ders = false, durum: AttendanceRow["durum"] = "normal"): AttendanceRow => ({ id, studentId: "s1", date, vakitler, ders, durum });
@@ -66,5 +66,18 @@ describe("buildChart (namaz takip çizelgesi)", () => {
     expect(c.rows[1]!.days[0]).toEqual(["İ", "İ", "İ", "İ", "İ"]);
     expect(c.rows[1]!.katildi).toBe(0);
     expect(c.rows[1]!.katilmadi).toBe(2);
+  });
+});
+
+describe("chartByMonth", () => {
+  const st = [{ id: "a", name: "Ali" }] as never[];
+  const row = (date: string, vakitler: string[]) => ({ id: date, studentId: "a", date, vakitler, ders: false, durum: "normal" }) as never;
+  const months = chartByMonth(buildChart(st, [row("2026-09-30", ["Sabah"]), row("2026-10-01", []), row("2026-10-02", ["Yatsı"])]));
+  it("makes one chart per month in order", () => {
+    expect(months.map((m) => m.label)).toEqual(["Eylül 2026", "Ekim 2026"]);
+  });
+  it("counts days per month only", () => {
+    expect(months[0]!.rows[0]).toMatchObject({ katildi: 1, katilmadi: 0 });
+    expect(months[1]!.rows[0]).toMatchObject({ katildi: 1, katilmadi: 1 });
   });
 });

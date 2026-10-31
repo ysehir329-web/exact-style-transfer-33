@@ -149,3 +149,24 @@ export function buildChart(students: Student[], rows: AttendanceRow[]) {
     });
   return { days, rows: list };
 }
+
+const AY_ADLARI = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+
+/** Splits a chart into one chart per month; counts are recomputed for that month only. */
+export function chartByMonth(chart: ReturnType<typeof buildChart>) {
+  const keys = [...new Set(chart.days.map((d) => d.slice(0, 7)))];
+  return keys.map((key) => {
+    const idx = chart.days.flatMap((d, i) => (d.startsWith(key) ? [i] : []));
+    return {
+      key,
+      label: `${AY_ADLARI[Number(key.slice(5, 7)) - 1]} ${key.slice(0, 4)}`,
+      days: idx.map((i) => chart.days[i]!),
+      rows: chart.rows.map((r) => {
+        const days = idx.map((i) => r.days[i]!);
+        const katildi = days.filter((m) => m.includes("✓")).length;
+        const katilmadi = days.filter((m) => !m.includes("✓") && m[0] !== "İ").length;
+        return { name: r.name, days, katildi, katilmadi };
+      }),
+    };
+  });
+}
