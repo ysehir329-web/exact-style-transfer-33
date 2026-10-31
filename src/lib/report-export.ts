@@ -30,6 +30,7 @@ export function loadFonts() {
 type Pdf = import("jspdf").jsPDF;
 type MonthChart = ReturnType<typeof chartByMonth>[number];
 
+const pageMonth = new Map<number, string>();
 const DAYS_PER_PAGE = 10, ROWS_PER_PAGE = 28;
 
 /** Landscape namaz takip çizelgesi pages for one month (✓ / X / İ grid + day counts). */
@@ -46,6 +47,10 @@ function chartPdfPages(doc: Pdf, m: MonthChart, first: boolean) {
     for (const rows of rowChunks) {
       if (!firstPage) doc.addPage("a4", "landscape");
       firstPage = false;
+      pageMonth.set(doc.getNumberOfPages(), m.label);
+      doc.setFont("DejaVu", "bold"); doc.setFontSize(10); doc.setTextColor(34, 99, 74);
+      doc.text(m.label.toLocaleUpperCase("tr"), 10, 7);
+      doc.text(m.label.toLocaleUpperCase("tr"), 287, 7, { align: "right" });
       const vw = Math.min(4.2, (W - L - R - noW - nameW - 2 * cntW) / Math.max(1, days.length * V));
       const tableW = noW + nameW + days.length * V * vw + 2 * cntW;
       const x0 = L + (W - L - R - tableW) / 2;
@@ -122,6 +127,7 @@ export async function makePdf({ report, chart, title, rangeText }: ExportInput):
   doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
   doc.addFileToVFS("DejaVuSans-Bold.ttf", bold);
   doc.addFont("DejaVuSans-Bold.ttf", "DejaVu", "bold");
+  pageMonth.clear();
   months.forEach((m, i) => chartPdfPages(doc, m, i === 0));
   if (months.length) doc.addPage("a4", "portrait");
 
@@ -166,7 +172,7 @@ export async function makePdf({ report, chart, title, rangeText }: ExportInput):
     doc.setFontSize(8);
     doc.setTextColor(130);
     const { width, height } = doc.internal.pageSize;
-    doc.text(`Kur'an Kursu · Sayfa ${i}/${pages}`, width / 2, height - 6, { align: "center" });
+    doc.text(`Talebe Takip Paneli · ${pageMonth.get(i) ? `${pageMonth.get(i)} · ` : ""}Sayfa ${i}/${pages}`, width / 2, height - 6, { align: "center" });
   }
   return doc.output("blob");
 }

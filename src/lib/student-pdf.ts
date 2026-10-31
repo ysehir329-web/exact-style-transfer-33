@@ -92,7 +92,7 @@ function header(d: Doc, kicker: string, s: Student, photo = false) {
   fill(d, C.amber);
   d.rect(0, 44, PW, 1.6, "F");
   font(d, 8.5, true, [205, 232, 218]);
-  d.text(`KUR'AN KURSU · ${kicker.toLocaleUpperCase("tr")}`, M, 13);
+  d.text(`TALEBE TAKİP PANELİ · ${kicker.toLocaleUpperCase("tr")}`, M, 13);
   font(d, 8, false, [205, 232, 218]);
   d.text(`Hazırlanma: ${fmt(localIso())}`, photo ? PW - M - 36 : PW - M, 13, { align: "right" });
   font(d, 22, true, C.white);
@@ -348,7 +348,7 @@ function footers(d: Doc, name: string) {
     fill(d, C.green);
     d.rect(M, 284, CW, 0.5, "F");
     font(d, 7.5, false, C.gray);
-    d.text(`Kur'an Kursu · ${name}`, M, 289);
+    d.text(`Talebe Takip Paneli · ${name}`, M, 289);
     d.text(`Sayfa ${i}/${n}`, PW - M, 289, { align: "right" });
   }
 }
